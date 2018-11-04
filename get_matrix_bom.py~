@@ -12,7 +12,7 @@ def expand(c, p):
     return df
 
 query = pd.read_csv('query.csv')
-for i in query['child']:
+for i in queries['child']:
     if csvize(i) in os.listdir():
         expand(i, query)
 
