@@ -5,36 +5,49 @@ import os
 def csvize(filename):
     return filename + '.csv'
 
-#This function returns a data frame.
+#This fouction will print a message for those item cannot be broken down.  In future probaly they need to collected and trigger a todo action.
+def not_found(pn):
+    print(pn, 'can not be broken down.')
+
+
+#This function returns a data frame, with the child quantity times parent item quantity.
 def expand(c, p):
     df = pd.read_csv(csvize(c))
     df['quantity'] *= float(p[p['child'] == c]['quantity'])
     return df
 
+matrix_bom = pd.DataFrame(columns = ['parent', 'child', 'quantity', 'level'])
 query = pd.read_csv('query.csv')
-for i in query['child']:
-    if csvize(i) in os.listdir():
-        expand(i, query)
 
-matrix_bom_single = pd.DataFrame(columns = ['child', 'quantity', 'level'])
+for item in query['child']:
 
-parent = pd.read_csv(csvize('a0'))
-level = 1
-parent['level'] = level
+    if csvize(item) in os.listdir():
+        parent = expand(item, query)
 
-while not parent.empty:
+        matrix_bom_single =pd.DataFrame(columns = ['child', 'quantity', 'level'])
+        level = 1
+        parent['level'] = level
 
-    level += 1
+        while not parent.empty:
 
-    matrix_bom_single =pd.concat([matrix_bom_single, parent], ignore_index = True)
-    child = [expand(i, parent) for i in parent['child'] if csvize(i) in os.listdir()]
+            level += 1
+    
+            matrix_bom_single =pd.concat([matrix_bom_single, parent], ignore_index = True, sort = True)
+            child = [expand(i, parent) for i in parent['child'] if csvize(i) in os.listdir()]
+        
+            if child:
+                child = pd.concat(child, ignore_index = True)
+                child['level'] = level
+                parent = child
+        
+            else:
+                break
 
-    if child:
-        child = pd.concat(child, ignore_index = True)
-        child['level'] = level
-        parent = child
+        matrix_bom_single['parent'] = item
 
+        matrix_bom = pd.concat([matrix_bom, matrix_bom_single], ignore_index = True, sort = True) 
+        
     else:
-        break
-matrix_bom_single['parent'] = 'a0'
-print(matrix_bom_single)
+        not_found(item)
+
+matrix_bom.to_csv('query_matrix_bom.csv', index = None, columns = ['parent', 'child', 'level', 'quantity'])
